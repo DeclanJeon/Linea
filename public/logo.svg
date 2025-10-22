@@ -1,0 +1,90 @@
+<svg width="800" height="800" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+  <!-- 상단 웨이브 라인 with 노드들 -->
+  <g id="wave-line">
+    <!-- 메인 웨이브 패스 (진한 청록색) -->
+    <path 
+      d="M 200 430 L 300 430 Q 320 430 335 410 T 380 380 Q 400 365 430 365 T 480 390 Q 500 405 530 420 T 580 440" 
+      stroke="#3AAFB9" 
+      stroke-width="6" 
+      fill="none" 
+      stroke-linecap="round"
+    />
+    
+    <!-- 연결 웨이브 (연한 회색) -->
+    <path 
+      d="M 580 440 Q 600 450 630 445 T 680 440 L 750 440" 
+      stroke="#C5D9DD" 
+      stroke-width="6" 
+      fill="none" 
+      stroke-linecap="round"
+    />
+    
+    <!-- 노드 포인트들 -->
+    <circle cx="300" cy="430" r="18" fill="none" stroke="#3AAFB9" stroke-width="6"/>
+    <circle cx="380" cy="380" r="18" fill="none" stroke="#3AAFB9" stroke-width="6"/>
+    <circle cx="460" cy="400" r="18" fill="none" stroke="#3AAFB9" stroke-width="6"/>
+    <circle cx="540" cy="430" r="18" fill="none" stroke="#3AAFB9" stroke-width="6"/>
+    <circle cx="630" cy="445" r="18" fill="none" stroke="#C5D9DD" stroke-width="6"/>
+  </g>
+  
+  <!-- Linea 텍스트 -->
+  <g id="text-linea">
+    <!-- L -->
+    <path 
+      d="M 240 490 L 240 700 L 340 700" 
+      stroke="#1A2F3F" 
+      stroke-width="16" 
+      fill="none" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+    />
+    
+    <!-- i (닷) -->
+    <circle cx="378" cy="490" r="14" fill="#3AAFB9"/>
+    
+    <!-- i (스템) with 재생 버튼 -->
+    <rect x="340" y="540" width="76" height="160" rx="8" fill="#3AAFB9"/>
+    
+    <!-- 재생 버튼 (삼각형) -->
+    <path 
+      d="M 365 590 L 365 650 L 405 620 Z" 
+      fill="#FFFFFF"
+    />
+    
+    <!-- n -->
+    <path 
+      d="M 440 700 L 440 540 Q 440 520 460 520 T 500 540 L 500 700" 
+      stroke="#1A2F3F" 
+      stroke-width="16" 
+      fill="none" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+    />
+    
+    <!-- e -->
+    <g id="letter-e">
+      <path 
+        d="M 650 620 L 550 620 Q 540 620 540 610 L 540 590 Q 540 560 560 550 Q 580 540 600 550 Q 640 560 650 600" 
+        stroke="#1A2F3F" 
+        stroke-width="16" 
+        fill="none" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"
+      />
+      <path 
+        d="M 540 650 Q 540 680 560 690 Q 580 700 610 690 Q 640 680 650 650" 
+        stroke="#1A2F3F" 
+        stroke-width="16" 
+        fill="none" 
+        stroke-linecap="round"
+      />
+    </g>
+    
+    <!-- a -->
+    <g id="letter-a">
+      <ellipse cx="720" cy="620" rx="45" ry="80" fill="none" stroke="#1A2F3F" stroke-width="16"/>
+      <line x1="765" y1="540" x2="765" y2="700" stroke="#1A2F3F" stroke-width="16" stroke-linecap="round"/>
+    </g>
+  </g>
+</g>
+</svg>
