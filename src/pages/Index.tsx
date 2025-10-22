@@ -1,143 +1,59 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  Track,
-  Playlist,
-  getTracksByPlaylist,
-  getAllPlaylists,
-  getCurrentPlaylistId,
-  setCurrentPlaylistId,
-  initDB,
-  updateTrack
-} from '@/lib/db';
+import { usePlayer } from '@/contexts/PlayerContext';
+import { usePlaylist } from '@/contexts/PlaylistContext';
 import { YouTubePlayer } from '@/components/YouTubePlayer';
 import { AddTrackForm } from '@/components/AddTrackForm';
 import { PlaylistView } from '@/components/PlaylistView';
 import { PlayerControls } from '@/components/PlayerControls';
 import { PlaylistManager } from '@/components/PlaylistManager';
 import { PlaylistImportExport } from '@/components/PlaylistImportExport';
-import { Music2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Music2, Loader2, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+/**
+ * Index 페이지
+ * 
+ * 애플리케이션의 메인 페이지로 모든 주요 UI 컴포넌트를 구성합니다.
+ */
 const Index = () => {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [currentPlaylistId, setCurrentPlaylistIdState] = useState<string>('default');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isShuffled, setIsShuffled] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  const { state: playerState } = usePlayer();
+  const {
+    currentPlaylist,
+    isLoading: playlistLoading,
+    error: playlistError,
+  } = usePlaylist();
 
-  useEffect(() => {
-    initDB().then(async () => {
-      const playlistId = await getCurrentPlaylistId();
-      setCurrentPlaylistIdState(playlistId);
-      await loadPlaylists();
-      await loadTracks(playlistId);
-    });
-  }, []);
+  const { currentIndex, error: playerError, isLoading: playerLoading } = playerState;
+  const currentTrack = playerState.tracks[currentIndex];
 
-  const loadPlaylists = async () => {
-    const allPlaylists = await getAllPlaylists();
-    setPlaylists(allPlaylists);
-  };
+  /**
+   * 에러 렌더링
+   */
+  const renderError = () => {
+    const error = playerError || playlistError;
+    if (!error) return null;
 
-  const loadTracks = async (playlistId: string) => {
-    const playlistTracks = await getTracksByPlaylist(playlistId);
-    setTracks(playlistTracks);
-    setCurrentIndex(0);
-  };
-
-  const handlePlaylistChange = async (playlistId: string) => {
-    setCurrentPlaylistIdState(playlistId);
-    await setCurrentPlaylistId(playlistId);
-    await loadTracks(playlistId);
-    setIsPlaying(false);
-  };
-
-  const handleTrackEnd = () => {
-    if (isShuffled) {
-      const nextIndex = Math.floor(Math.random() * tracks.length);
-      setCurrentIndex(nextIndex);
-    } else if (currentIndex < tracks.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      // 플레이리스트 끝에 도달하면 재생 중지
-      setIsPlaying(false);
-      setCurrentIndex(0);
-    }
-  };
-
-  const handleNext = () => {
-    if (isShuffled) {
-      const nextIndex = Math.floor(Math.random() * tracks.length);
-      setCurrentIndex(nextIndex);
-    } else if (currentIndex < tracks.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      setCurrentIndex(0);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    } else {
-      setCurrentIndex(tracks.length - 1);
-    }
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>오류 발생</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
   };
 
   /**
-   * 비디오 메타데이터(제목, 썸네일)를 업데이트합니다.
+   * 로딩 상태
    */
-  const handleTrackMetadataUpdate = useCallback(async (
-    index: number,
-    metadata: { title: string; thumbnail: string }
-  ) => {
-    const track = tracks[index];
-    if (!track) return;
-
-    // 제목이나 썸네일이 변경된 경우에만 업데이트
-    if (track.title !== metadata.title || track.thumbnail !== metadata.thumbnail) {
-      const updatedTrack: Track = {
-        ...track,
-        title: metadata.title,
-        thumbnail: metadata.thumbnail,
-      };
-
-      try {
-        await updateTrack(updatedTrack);
-        // UI 즉시 업데이트
-        setTracks(prev => prev.map((t, i) => i === index ? updatedTrack : t));
-        console.log(`✅ 메타데이터 업데이트: ${metadata.title}`);
-      } catch (error) {
-        console.error('메타데이터 업데이트 실패:', error);
-      }
-    }
-  }, [tracks]);
-
-  /**
-   * 플레이리스트 전체를 처음부터 재생합니다.
-   */
-  const handlePlayAll = () => {
-    if (tracks.length === 0) {
-      toast({
-        title: '플레이리스트가 비어있습니다',
-        description: '재생할 트랙을 추가해주세요.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setCurrentIndex(0);
-    setIsPlaying(true);
-    toast({
-      title: '플레이리스트 재생 시작',
-      description: `${tracks.length}개의 트랙을 연속 재생합니다.`,
-    });
-  };
-
-  const currentTrack = tracks[currentIndex];
-  const currentPlaylist = playlists.find(p => p.id === currentPlaylistId);
+  if (playlistLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">플레이리스트를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -155,103 +71,77 @@ const Index = () => {
           </p>
         </div>
 
+        {/* 에러 표시 */}
+        {renderError()}
+
         {/* Playlist Manager */}
         <div className="bg-card rounded-xl p-6 border border-border mb-6">
           <h2 className="text-xl font-semibold mb-4">플레이리스트 관리</h2>
           <div className="space-y-3">
-            <PlaylistManager
-              playlists={playlists}
-              currentPlaylistId={currentPlaylistId}
-              onPlaylistChange={handlePlaylistChange}
-              onPlaylistsChanged={loadPlaylists}
-            />
-            {currentPlaylist && (
-              <PlaylistImportExport
-                currentPlaylist={currentPlaylist}
-                tracks={tracks}
-                onImportComplete={() => loadTracks(currentPlaylistId)}
-              />
-            )}
+            <PlaylistManager />
+            {currentPlaylist && <PlaylistImportExport />}
           </div>
         </div>
 
         {/* Add Track Form */}
         <div className="bg-card rounded-xl p-6 border border-border mb-6">
           <h2 className="text-xl font-semibold mb-4">트랙 추가</h2>
-          <AddTrackForm
-            playlistId={currentPlaylistId}
-            onTrackAdded={() => loadTracks(currentPlaylistId)}
-          />
+          <AddTrackForm />
         </div>
 
         {/* Current Playing */}
         {currentTrack && (
           <div className="bg-card rounded-xl p-6 border border-border mb-6">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-20 h-20 rounded-lg overflow-hidden bg-gradient-accent shadow-glow-accent">
+              <div className="w-20 h-20 rounded-lg overflow-hidden bg-gradient-accent shadow-glow-accent flex-shrink-0 relative">
                 {currentTrack.thumbnail ? (
                   <img
                     src={currentTrack.thumbnail}
                     alt={currentTrack.title}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      const parent = (e.target as HTMLImageElement).parentElement;
+                      if (parent) {
+                        const fallback = parent.querySelector('.fallback-icon');
+                        if (fallback) {
+                          fallback.classList.remove('hidden');
+                        }
+                      }
+                    }}
                   />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Music2 className="h-10 w-10 text-white" />
+                ) : null}
+                <div className={currentTrack.thumbnail ? 'fallback-icon hidden w-full h-full flex items-center justify-center' : 'w-full h-full flex items-center justify-center'}>
+                  <Music2 className="h-10 w-10 text-white" />
+                </div>
+                {playerLoading && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
                   </div>
                 )}
               </div>
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground mb-1">재생 중</p>
-                <h3 className="text-xl font-semibold">{currentTrack.title}</h3>
-                <p className="text-sm text-muted-foreground">{currentTrack.videoId}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground mb-1">현재 재생 중</p>
+                <h3 className="text-xl font-semibold truncate">{currentTrack.title}</h3>
+                <p className="text-sm text-muted-foreground truncate">{currentTrack.videoId}</p>
               </div>
             </div>
 
-            <PlayerControls
-              isPlaying={isPlaying}
-              isShuffled={isShuffled}
-              playbackRate={playbackRate}
-              onPlayPause={() => setIsPlaying(!isPlaying)}
-              onPrevious={handlePrevious}
-              onNext={handleNext}
-              onShuffleToggle={() => setIsShuffled(!isShuffled)}
-              onPlaybackRateChange={setPlaybackRate}
-              onPlayAll={handlePlayAll}
-              hasNext={tracks.length > 1}
-              hasPrevious={tracks.length > 1}
-            />
+            <PlayerControls />
           </div>
         )}
 
         {/* Playlist */}
         <div className="bg-card rounded-xl p-6 border border-border">
           <h2 className="text-xl font-semibold mb-4">
-            플레이리스트 ({tracks.length})
+            플레이리스트 ({playerState.tracks.length}곡)
           </h2>
-          <PlaylistView
-            tracks={tracks}
-            currentIndex={currentIndex}
-            onTrackSelect={(index) => {
-              setCurrentIndex(index);
-              setIsPlaying(true);
-            }}
-            onTracksChanged={() => loadTracks(currentPlaylistId)}
-          />
+          <PlaylistView />
         </div>
       </div>
 
       {/* YouTube Player (hidden) */}
-      <YouTubePlayer
-        tracks={tracks}
-        currentIndex={currentIndex}
-        isPlaying={isPlaying}
-        playbackRate={playbackRate}
-        isShuffled={isShuffled}
-        onTrackEnd={handleTrackEnd}
-        onPlayPause={setIsPlaying}
-        onTrackMetadataUpdate={handleTrackMetadataUpdate}
-      />
+      <YouTubePlayer />
     </div>
   );
 };

@@ -12,8 +12,8 @@ export interface Track {
   title: string;
   videoId: string;
   addedAt: number;
-  thumbnail?: string; // 썸네일 URL 추가
-  duration?: number;  // 선택적: 재생 시간
+  thumbnail?: string;
+  duration?: number;
 }
 
 export interface Playlist {
@@ -24,19 +24,43 @@ export interface Playlist {
 }
 
 let db: IDBDatabase | null = null;
+let dbInitPromise: Promise<IDBDatabase> | null = null;
 
+/**
+ * IndexedDB 초기화 (Singleton 패턴)
+ * 
+ * 여러 곳에서 동시에 호출되어도 한 번만 초기화됩니다.
+ */
 export const initDB = (): Promise<IDBDatabase> => {
-  return new Promise((resolve, reject) => {
-    if (db) {
-      resolve(db);
-      return;
-    }
+  // 이미 초기화된 경우 기존 인스턴스 반환
+  if (db) {
+    return Promise.resolve(db);
+  }
 
+  // 초기화 중인 경우 기존 Promise 반환
+  if (dbInitPromise) {
+    return dbInitPromise;
+  }
+
+  // 새로운 초기화 시작
+  dbInitPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = () => reject(request.error);
+    request.onerror = () => {
+      dbInitPromise = null;
+      reject(request.error);
+    };
+
     request.onsuccess = () => {
       db = request.result;
+      
+      // DB 연결이 끊어진 경우 처리
+      db.onclose = () => {
+        console.warn('[DB] IndexedDB 연결이 끊어졌습니다.');
+        db = null;
+        dbInitPromise = null;
+      };
+
       resolve(db);
     };
 
@@ -77,6 +101,19 @@ export const initDB = (): Promise<IDBDatabase> => {
       }
     };
   });
+
+  return dbInitPromise;
+};
+
+/**
+ * DB 연결 종료
+ */
+export const closeDB = (): void => {
+  if (db) {
+    db.close();
+    db = null;
+    dbInitPromise = null;
+  }
 };
 
 // Playlist operations
